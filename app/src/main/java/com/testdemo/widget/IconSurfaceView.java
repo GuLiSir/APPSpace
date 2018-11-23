@@ -5,9 +5,11 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.support.annotation.Nullable;
+import android.text.BoringLayout;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -16,7 +18,12 @@ import android.view.SurfaceView;
 import android.view.VelocityTracker;
 
 import com.testdemo.absPkg.AttachInitiator;
+import com.testdemo.entity.BottomFrameBody;
 import com.testdemo.entity.IconEntity;
+import com.testdemo.entity.LeftFrameBody;
+import com.testdemo.entity.RightFrameBody;
+import com.testdemo.entity.ScreenBox;
+import com.testdemo.entity.TopFrameBody;
 import com.testdemo.utils.CircleUtils;
 
 import java.util.HashSet;
@@ -59,9 +66,10 @@ public class IconSurfaceView extends SurfaceView {
 
         paintText.setColor(Color.BLUE);
         paintText.setAntiAlias(true);
+        paintText.setTextSize(50);
+        paintText.setStrokeWidth(5);
     }
 
-//    Set<IconEntity>
 
 
     private SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
@@ -69,6 +77,13 @@ public class IconSurfaceView extends SurfaceView {
         public void surfaceCreated(SurfaceHolder holder) {
             mIsDrawing = true;
             new Thread(runnable).start();
+            box.add(new LeftFrameBody());
+            box.add(new TopFrameBody());
+            int measuredWidth = getMeasuredWidth();
+            int measuredHeight = getMeasuredHeight();
+            box.add(new RightFrameBody(measuredWidth));
+            box.add(new BottomFrameBody(measuredHeight));
+            box.bigBang();
         }
 
         @Override
@@ -87,14 +102,13 @@ public class IconSurfaceView extends SurfaceView {
         @Override
         public void run() {
             while (mIsDrawing) {
-
-
-                calcLocation();
+//                calcLocation();
                 draw();
                 //通过线程休眠以控制刷新速度
                 try {
                     //25fps
                     Thread.sleep(40);
+//                    Thread.sleep(20);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -102,15 +116,8 @@ public class IconSurfaceView extends SurfaceView {
         }
     };
 
-    /**
-     * 计算每个item新的位置,以及速度的方向
-     */
-    private void calcLocation() {
-        for (IconEntity entity : iconEntitySet) {
-            entity.fresh();
+    private ScreenBox box = new ScreenBox();
 
-        }
-    }
 
     //用于清除的画笔
     Paint paintClean = new Paint();
@@ -133,9 +140,10 @@ public class IconSurfaceView extends SurfaceView {
                     mCanvas.drawLine(entity1.getX(), entity1.getY(), entity.getX(), entity.getY(), paint);
                 }
 //                    mCanvas.drawRect(entity.getRect(), paint);
-                mCanvas.drawText(String.valueOf(entity.number), entity.getX(), entity.getY(), paintText);
                 //绘制圆
                 mCanvas.drawCircle(entity.getX(), entity.getY(), entity.radius, paint);
+                //绘制文本
+                mCanvas.drawText(String.valueOf(entity.number), entity.getX(), entity.getY(), paintText);
             }
         } catch (Exception e) {
 
@@ -149,6 +157,9 @@ public class IconSurfaceView extends SurfaceView {
 
     public void DumpItem(Set<IconEntity> iconEntitySet) {
         this.iconEntitySet.addAll(iconEntitySet);
+        for (IconEntity iconEntity : iconEntitySet) {
+            box.add(iconEntity);
+        }
     }
 
     @Nullable
@@ -156,6 +167,10 @@ public class IconSurfaceView extends SurfaceView {
 
     //移动速度测量
     private VelocityTracker mVelocityTracker = null;
+    //按下屏幕的位置
+    private final Point touchDownPoint = new Point();
+    //最后一次触摸的位置,包含按下和移动
+    private final Point lastTouchPoint = new Point();
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -173,29 +188,42 @@ public class IconSurfaceView extends SurfaceView {
                     mVelocityTracker.clear();
                 }
                 mVelocityTracker.addMovement(event);
+                touchDownPoint.x = (int) x;
+                touchDownPoint.y = (int) y;
+                lastTouchPoint.x = (int) x;
+                lastTouchPoint.y = (int) y;
                 //检查是否按在了指定的圆点
                 for (IconEntity entity : iconEntitySet) {
-                    double v = CircleUtils.pointDistance(entity.getX(), entity.getY(), (int) x, (int) y);
-                    if (v <= entity.radius) {
+//                    Log.i(TAG, String.format("onTouchEvent: down:%s %.2f, radius:%d", entity.toString(), v, entity.radius));
+//                    double v = CircleUtils.pointDistance(entity.getX(), entity.getY(), (int) x, (int) y);
+                    if (CircleUtils.pointInCircle(entity, touchDownPoint)) {
                         //触摸按在此圆内,拦截事件
                         currentTouch = entity;
                         currentTouch.setStop(true);
                         return true;
                     }
-                    Log.i(TAG, String.format("onTouchEvent: down:%s %.2f, radius:%d", entity.toString(), v, entity.radius));
                 }
                 break;
             case MotionEvent.ACTION_MOVE:
                 mVelocityTracker.addMovement(event);
                 mVelocityTracker.computeCurrentVelocity(1000);
+                float offsetX = x - lastTouchPoint.x;
+                float offsetY = y - lastTouchPoint.y;
                 if (currentTouch != null) {
                     //按住的圆点跟着手指移动
-                    currentTouch.setX((int) x);
-                    currentTouch.setY((int) y);
+                    // TODO: 2018/11/22 拖动的时候,会出现两条线,这个是需要进行同步操作的
+                    currentTouch.setXReal(currentTouch.getX() + offsetX);
+                    currentTouch.setYReal(currentTouch.getY() + offsetY);
+//                    currentTouch.offSet( offsetX,  offsetY);
                 }
-                Log.i(TAG, String.format("onTouchEvent: speed:x %.2f,y %.2f", mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity()));
+                Log.i(TAG, String.format("onTouchEvent: speed:x %.2f,y %.2f offSetX:%.2f,offSetY:%.2f",
+                        mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity(), offsetX, offsetY));
+                lastTouchPoint.x = (int) x;
+                lastTouchPoint.y = (int) y;
                 break;
-            default:
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_OUTSIDE:
+            case MotionEvent.ACTION_CANCEL:
                 if (currentTouch == null) {
                     throw new IllegalStateException();
                 }
@@ -204,6 +232,8 @@ public class IconSurfaceView extends SurfaceView {
                 //清除速度
                 mVelocityTracker.recycle();
                 mVelocityTracker = null;
+                break;
+            default:
                 break;
         }
 

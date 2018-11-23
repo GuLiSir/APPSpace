@@ -10,12 +10,14 @@ import android.view.Display;
 import android.view.Window;
 import android.view.WindowManager;
 
+import com.testdemo.entity.CircleBetweenCircleAccelerator;
 import com.testdemo.entity.IconEntity;
 import com.testdemo.widget.IconSurfaceView;
 
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class IconShowActivity extends Activity {
 
@@ -88,19 +90,29 @@ public class IconShowActivity extends Activity {
         defaultDisplay.getSize(point);
         int x = point.x;
         int y = point.y;
-
+//        long l1 = System.nanoTime();
+//        try {
+//            Thread.sleep(1);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        l1  = System.nanoTime()-l1 ;
+//
+//        long l = TimeUnit.NANOSECONDS.toMillis(50000000);
+//        long l2 = TimeUnit.MILLISECONDS.toNanos(5);
         rectParent.right = x;
         rectParent.bottom = y;
 //        rectParent
         //初始化各个图标的位置
         for (IconEntity entity : iconEntitySet) {
             initPoint(entity);
-            Log.i(TAG, "onCreate: 布局位置:" + entity.getRect());
             entity.setAllEntitySet(iconEntitySet);
-            entity.setRange(rectParent);
+            CircleBetweenCircleAccelerator circleAccelerator = new CircleBetweenCircleAccelerator(entity, iconEntitySet);
+            entity.acceleratorList.add(circleAccelerator);
         }
 
         iconSurfaceView.DumpItem(iconEntitySet);
+
     }
 
     private static final String TAG = "IconShowActivity";
@@ -133,10 +145,11 @@ public class IconShowActivity extends Activity {
         for (IconEntity iconEntity : iconEntitySet) {
             //过滤掉自己,自己和自己不能进行碰撞检测
             if (iconEntity != entity) {
-                int x1 = iconEntity.getX();
-                int y1 = iconEntity.getY();
-                int x2 = entity.getX();
-                int y2 = entity.getY();
+                // TODO: 2018/11/23 需要对精度进行修改
+                int x1 = (int) iconEntity.getX();
+                int y1 = (int) iconEntity.getY();
+                int x2 = (int) entity.getX();
+                int y2 = (int) entity.getY();
                 //勾股定理求圆心距离
                 double sqrt = Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
                 if (sqrt <= (iconEntity.radius + iconEntity.radius)) {
@@ -147,8 +160,6 @@ public class IconShowActivity extends Activity {
         }
         return false;
     }
-
-
 
 
 }
