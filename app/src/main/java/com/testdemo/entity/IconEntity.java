@@ -4,39 +4,42 @@ import android.graphics.Rect;
 import android.util.Log;
 
 import com.testdemo.IconShowActivity;
+import com.testdemo.absPkg.Accelerator;
 import com.testdemo.absPkg.AttachInitiator;
+import com.testdemo.absPkg.Body;
+import com.testdemo.absPkg.Circle;
+import com.testdemo.utils.CircleUtils;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-public class IconEntity implements AttachInitiator {
+public class IconEntity extends BaseBody implements AttachInitiator, Circle {
 
-    private int x = 0;
-    private int y = 0;
-    private int z = 0;
     //图标半径
-    public int radius = 100;
+    public float radius = 100;
     //所连接的item对象
     private Set<AttachInitiator> attachEntity = new HashSet<>();
-    //x轴速度
-    private int xSpeed = 0;
-    //y轴速度
-    private int ySpeed = 0;
+
     //界面中所有元素的集合
     private final Set<IconEntity> allIconEntitySet = new HashSet<>();
-    private Rect rectParent;
     public final int number;
+    private Random random = new Random();
+    /**
+     * 所受加速度的集合
+     */
+    public final List<Accelerator> acceleratorList = new ArrayList<>();
 
     public IconEntity(int number) {
         this.number = number;
-        Random random = new Random();
         //随机速度方向
-        while (xSpeed == 0) {
-            xSpeed = random.nextInt(200) - 100;
+        while (getSpeedX() == 0) {
+            setSpeedX(random.nextInt(200) - 100);
         }
-        while (ySpeed == 0) {
-            ySpeed = random.nextInt(200) - 100;
+        while (getSpeedY() == 0) {
+            setSpeedY(random.nextInt(200) - 100);
         }
     }
 
@@ -93,58 +96,33 @@ public class IconEntity implements AttachInitiator {
     }
 
 
-    private final Rect rect = new Rect();
+    @Override
+    public void setX(float x) {
+        if (!stop) {
+            super.setX(x);
+        }
+    }
+
+    @Override
+    public void setY(float y) {
+        if (!stop) {
+            super.setY(y);
+        }
+    }
 
     /**
-     * 获取该图标的矩形边框
+     * 设置绝对位置
      */
-    public Rect getRect() {
-        return rect;
+    public void setXReal(float x) {
+        super.setX(x);
     }
-
-
-    public void setX(int x) {
-        this.x = x;
-        refreshRect();
-    }
-
-    public void setY(int y) {
-        this.y = y;
-        refreshRect();
-    }
-
-    public void setZ(int z) {
-        this.z = z;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-//    /**
-//     * 手指移动事件的设置x坐标
-//     */
-//    public void moveEventX(int x) {
-//        setX(x);
-//    }
 
 
     /**
-     * 刷新所在的矩形区域信息
+     * 设置绝对位置
      */
-    private void refreshRect() {
-        rect.left = x - radius;
-        rect.right = x + radius;
-        rect.top = y - radius;
-        rect.bottom = y + radius;
+    public void setYReal(float y) {
+        super.setY(y);
     }
 
     public Set<AttachInitiator> getAttachEntity() {
@@ -158,58 +136,6 @@ public class IconEntity implements AttachInitiator {
         allIconEntitySet.addAll(iconEntitySet);
     }
 
-    private long lastTime = System.currentTimeMillis();
-
-    /**
-     * 重新计算位置
-     */
-    public void fresh() {
-        //球与球之间的碰撞检测
-        boolean b = IconShowActivity.collisionDetection(this, allIconEntitySet);
-        if (b) {
-            //检测到碰撞了,直接速度取反
-            xSpeed = -xSpeed;
-            ySpeed = -ySpeed;
-        } else {
-
-        }
-
-        //边缘碰撞检测
-        //左边缘
-        if (getX() <= rectParent.left + radius) {
-            xSpeed = Math.abs(xSpeed);
-        }
-        //右边缘
-        if (getX() >= rectParent.right - radius) {
-            xSpeed = -Math.abs(xSpeed);
-        }
-        //上边缘
-        if (getY() <= rectParent.top + radius) {
-            ySpeed = Math.abs(ySpeed);
-        }
-        //下边缘
-        if (getY() >= rectParent.bottom - radius) {
-            ySpeed = -Math.abs(ySpeed);
-        }
-
-        long l = System.currentTimeMillis();
-        //与上次的时间差
-        long timeSpace = l - lastTime;
-
-        //被暂停了,就不会移动
-        if (!stop) {
-            setX((int) (getX() + xSpeed / 1000.0f * timeSpace));
-            setY((int) (getY() + ySpeed / 1000.0f * timeSpace));
-        } else {
-            Log.i(TAG, "fresh: stop");
-        }
-
-        lastTime = System.currentTimeMillis();
-    }
-
-    public void setRange(Rect rectParent) {
-        this.rectParent = rectParent;
-    }
 
     private boolean stop = false;
 
@@ -218,4 +144,53 @@ public class IconEntity implements AttachInitiator {
     }
 
     private static final String TAG = "IconEntity";
+
+    /**
+     * @return 该圆的半径
+     */
+    @Override
+    public float getRadius() {
+        return radius;
+    }
+
+
+    @Override
+    public boolean isCollision(Body body) {
+        if (body instanceof Circle) {
+            boolean b = CircleUtils.CircleInCircle(this, (Circle) body);
+            return b;
+        }
+        return false;
+    }
+
+    @Override
+    public void onCollision(Body body1) {
+        if (body1 instanceof IconEntity) {
+            //圆与圆相撞
+            float x = body1.getX();
+            if (x >= getX()) {
+                //对方在自己的右边,自己往左边移动
+                setSpeedX(-Math.abs(getSpeedX()));
+            } else {
+                setSpeedX(Math.abs(getSpeedX()));
+            }
+            float y = body1.getY();
+            if (y >= getY()) {
+                //对方在自己的下边,自己往上边移动
+                setSpeedY(-Math.abs(getSpeedY()));
+            } else {
+                setSpeedY(Math.abs(getSpeedY()));
+            }
+        } else if (body1 instanceof LeftFrameBody) {
+            //左边框相撞
+            setSpeedX(Math.abs(getSpeedX()));
+        } else if (body1 instanceof TopFrameBody) {
+            //顶部相撞
+            setSpeedY(Math.abs(getSpeedY()));
+        } else if (body1 instanceof RightFrameBody) {
+            setSpeedX(-Math.abs(getSpeedX()));
+        } else if (body1 instanceof BottomFrameBody) {
+            setSpeedY(-Math.abs(getSpeedY()));
+        }
+    }
 }
