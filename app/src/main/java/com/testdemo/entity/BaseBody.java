@@ -1,6 +1,10 @@
 package com.testdemo.entity;
 
+import com.testdemo.absPkg.Accelerator;
 import com.testdemo.absPkg.Body;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class BaseBody implements Body {
 
@@ -9,21 +13,42 @@ public abstract class BaseBody implements Body {
     //y轴速度
     private float speedY = 0;
     //x轴加速度
-    private float acceleratedSpeedX = 0;
+//    private float acceleratedSpeedX = 0;
     //y轴加速度
-    private float acceleratedSpeedY = 0;
+//    private float acceleratedSpeedY = 0;
 
     private float x = 0;
     private float y = 0;
     private float z = 0;
 
+    /**
+     * 所受加速度的集合
+     */
+    private final List<Accelerator> acceleratorList = new ArrayList<>();
+
+
+    @Override
+    public void addAccelerator(Accelerator accelerator) {
+        acceleratorList.add(accelerator);
+    }
+
     @Override
     public float getSpeedX() {
+//        if (speedX > 0) {
+//            speedX--;
+//        } else if (speedX < 0) {
+//            speedX++;
+//        }
         return speedX;
     }
 
     @Override
     public float getSpeedY() {
+//        if (speedY > 0) {
+//            speedY--;
+//        } else if (speedY    < 0) {
+//            speedY++;
+//        }
         return speedY;
     }
 
@@ -52,8 +77,6 @@ public abstract class BaseBody implements Body {
         return z;
     }
 
-
-
     @Override
     public void setX(float x) {
         this.x = x;
@@ -72,22 +95,21 @@ public abstract class BaseBody implements Body {
 
     @Override
     public float getAcceleratedSpeedX() {
-        return acceleratedSpeedX;
+        float result = 0f;
+        for (Accelerator accelerator : acceleratorList) {
+            result += accelerator.acceleratedX(this);
+        }
+        return result;
     }
 
     @Override
     public float getAcceleratedSpeedY() {
-        return acceleratedSpeedY;
+        float result = 0f;
+        for (Accelerator accelerator : acceleratorList) {
+            result += accelerator.acceleratedY(this);
+        }
+        return result;
     }
 
-    @Override
-    public void setAcceleratedSpeedX(float acceleratedSpeedX) {
-        this.acceleratedSpeedX = acceleratedSpeedX;
-    }
-
-    @Override
-    public void setAcceleratedSpeedY(float acceleratedSpeedY) {
-        this.acceleratedSpeedY = acceleratedSpeedY;
-    }
 
 }

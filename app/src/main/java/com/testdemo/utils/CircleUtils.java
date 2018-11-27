@@ -53,9 +53,16 @@ public class CircleUtils {
         return pointDistance(circle1.getX(), circle1.getY(), circle2.getX(), circle2.getY());
     }
 
+    /**
+     * 判断两圆是否有交点
+     * @param circle1
+     * @param circle2
+     * @return
+     */
     public static boolean CircleInCircle(Circle circle1, Circle circle2) {
         double v = CircleBetweenCircleDistance(circle1, circle2);
         //圆心距离小于总半径之和则碰撞
         return v <= (circle1.getRadius() + circle2.getRadius());
     }
+
 }

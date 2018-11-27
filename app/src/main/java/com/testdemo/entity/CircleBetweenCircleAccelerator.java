@@ -3,7 +3,8 @@ package com.testdemo.entity;
 import android.util.Log;
 
 import com.testdemo.absPkg.Accelerator;
-import com.testdemo.absPkg.AttachInitiator;
+import com.testdemo.absPkg.Body;
+import com.testdemo.absPkg.Circle;
 import com.testdemo.utils.CircleUtils;
 
 import java.util.Set;
@@ -26,58 +27,48 @@ public class CircleBetweenCircleAccelerator implements Accelerator {
 
     //      公式:y=(x/4)^3,其函数图像找网页在线工具绘制 https://zh.numberempire.com/graphingcalculator.php
     @Override
-    public float acceleratedX() {
-        int xResult = 0;
+    public float acceleratedX(Body body1) {
+        float xResult = 0;
         for (IconEntity entity : iconEntitySet) {
-            //过滤与自身对比计算
-            if (entity != iconEntity) {
-                double v = CircleUtils.CircleBetweenCircleDistance(iconEntity, entity);
-//                xResult += Math.pow((v / 4 - distance), 3);
-//                ((x-100)/20)^2
-                double pow = Math.pow((v - distance) / 40f, 2);
+            IconEntity body = entity;
+            if (body instanceof Circle && entity != iconEntity) {
+                Circle circle = (Circle) body;
+                double v = CircleUtils.CircleBetweenCircleDistance(iconEntity, circle);
+                //拉力大小
+                double a1 = (v - distance) * 2;
+                float x1 = iconEntity.getX() - body.getX();
+                double x2 = x1 * a1;
+                xResult = (float) x2;
+                if (v > distance) {
 
-                if (v <= distance) {
-                    pow = -pow;
+                    //距离过远,产生互相靠拢的拉力
+                    if (iconEntity.getX() < body.getX()) {
+                        assert x2 > 0;
+                    }
                 }
-                xResult += pow;
             }
-
         }
-        if (xResult > 0) {
-            xResult = Math.min(xResult, 15);
-        } else if (xResult < 0) {
-            xResult = Math.max(xResult, -15);
-        }
-        Log.i(TAG, "acceleratedX: " + xResult);
-        return xResult;
+        return 000;
     }
 
     private static final String TAG = "CircleBetweenCircleAcce";
 
     @Override
-    public float acceleratedY() {
-        int xResult = 0;
+    public float acceleratedY(Body body1) {
+        float yResult = 0;
         for (IconEntity entity : iconEntitySet) {
-            //过滤与自身对比计算
-            if (entity != iconEntity) {
-                double v = CircleUtils.CircleBetweenCircleDistance(iconEntity, entity);
-//                xResult += Math.pow((v / 4 - distance), 3);
-//                ((x-100)/20)^2
-                double pow = Math.pow((v - distance) / 40f, 2);
-
-                if (v <= distance) {
-                    pow = -pow;
-                }
-                xResult += pow;
+            IconEntity body = entity;
+            if (body instanceof Circle && entity != iconEntity) {
+                Circle circle = (Circle) body;
+                double v = CircleUtils.CircleBetweenCircleDistance(iconEntity, circle);
+                //拉力大小
+                double a1 = (v - distance) * 2;
+                float x1 = iconEntity.getY() - body.getY();
+                double x2 = x1 * a1;
+                yResult = (float) x2;
             }
+        }
 
-        }
-        if (xResult > 0) {
-            xResult = Math.min(xResult, 15);
-        } else if (xResult < 0) {
-            xResult = Math.max(xResult, -15);
-        }
-        Log.i(TAG, "acceleratedY: " + xResult);
-        return xResult;
+        return 000;
     }
 }

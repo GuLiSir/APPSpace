@@ -6,13 +6,15 @@ package com.testdemo.absPkg;
 public interface Accelerator {
 
     /**
-     * @return x轴上的加速度,单位:像素/s
+     * @return 某一物体对自身在x轴上的加速度,单位:像素/s
+     * @param body 某一物体
      */
-    float acceleratedX();
+    float acceleratedX(Body body);
 
     /**
-     * @return y轴上的加速度,单位:像素/s
+     * @return 某一物体对自身在y轴上的加速度,单位:像素/s
+     * @param body 某一物体
      */
-    float acceleratedY();
+    float acceleratedY(Body body);
 
 }

@@ -1,20 +1,27 @@
 package com.testdemo.entity;
 
+import com.testdemo.absPkg.Accelerator;
 import com.testdemo.absPkg.Body;
 
 /**
  * 边框实体,用来做边界碰撞
  */
 public abstract class BaseFrameBody implements Body {
-    @Override
-    public void setAcceleratedSpeedX(float acceleratedSpeedX) {
+//    @Override
+//    public void setAcceleratedSpeedX(float acceleratedSpeedX) {
+//
+//    }
+//
+//    @Override
+//    public void setAcceleratedSpeedY(float acceleratedSpeedY) {
+//
+//    }
 
+    @Override
+    public void addAccelerator(Accelerator accelerator) {
+        //不受外界物体影响
     }
 
-    @Override
-    public void setAcceleratedSpeedY(float acceleratedSpeedY) {
-
-    }
 
     @Override
     public void setX(float x) {

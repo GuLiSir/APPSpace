@@ -1,6 +1,9 @@
 package com.testdemo.entity;
 
+import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.util.Log;
 
 import com.testdemo.IconShowActivity;
@@ -27,21 +30,29 @@ public class IconEntity extends BaseBody implements AttachInitiator, Circle {
     private final Set<IconEntity> allIconEntitySet = new HashSet<>();
     public final int number;
     private Random random = new Random();
-    /**
-     * 所受加速度的集合
-     */
-    public final List<Accelerator> acceleratorList = new ArrayList<>();
+
 
     public IconEntity(int number) {
         this.number = number;
         //随机速度方向
         while (getSpeedX() == 0) {
-            setSpeedX(random.nextInt(200) - 100);
+            setSpeedX(random.nextInt(50) - 25);
         }
         while (getSpeedY() == 0) {
-            setSpeedY(random.nextInt(200) - 100);
+            setSpeedY(random.nextInt(50) - 25);
         }
+
+        setSpeedX(0);
+        setSpeedY(0);
+
+        //绘制椭圆
+        RectF rectF = new RectF(200, 200, 1700, 900);
+        //第一种方法绘制椭圆
+        path.addOval(rectF, Path.Direction.CW);
+        pathMeasure.setPath(path, false);
+
     }
+
 
     /**
      * 请求绑定指定的item
@@ -110,6 +121,45 @@ public class IconEntity extends BaseBody implements AttachInitiator, Circle {
         }
     }
 
+    Path path = new Path();
+    PathMeasure pathMeasure = new PathMeasure(path, false);
+    private float[] pos = new float[2];
+    private float[] tan = new float[2];
+
+    long time1 = System.currentTimeMillis();
+
+
+    @Override
+    public float getX() {
+
+        long dis = System.currentTimeMillis() - time1;
+        final long time = 36000;
+        long l = dis % time;
+        float v = 1 - l / (float) time;
+        int startP = number*number / 7;
+        float v1 = (startP + v);
+
+        float length = pathMeasure.getLength();
+        pathMeasure.getPosTan(length *v1, pos, tan);
+        return pos[0];
+//        return super.getX();
+    }
+
+    @Override
+    public float getY() {
+        long dis = System.currentTimeMillis() - time1;
+        final long time = 36000;
+        long l = dis % time;
+        float v = 1 - l / (float) time;
+        int startP = number*number / 7;
+        float v1 = (startP + v);
+
+        float length = pathMeasure.getLength();
+        pathMeasure.getPosTan(length *v1, pos, tan);
+        return pos[1];
+//        return super.getY();
+    }
+
     /**
      * 设置绝对位置
      */
@@ -137,6 +187,7 @@ public class IconEntity extends BaseBody implements AttachInitiator, Circle {
     }
 
 
+    //暂停移动
     private boolean stop = false;
 
     public void setStop(boolean stop) {

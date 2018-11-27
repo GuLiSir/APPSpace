@@ -5,9 +5,12 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.Point;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.text.BoringLayout;
 import android.util.AttributeSet;
@@ -26,6 +29,7 @@ import com.testdemo.entity.ScreenBox;
 import com.testdemo.entity.TopFrameBody;
 import com.testdemo.utils.CircleUtils;
 
+import java.sql.Time;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -56,6 +60,7 @@ public class IconSurfaceView extends SurfaceView {
     //圆形画笔
     private final Paint paint = new Paint();
     private final Paint paintText = new Paint();
+    private final Paint paintPath = new Paint();
 
     private void init() {
         holder = getHolder();
@@ -68,8 +73,32 @@ public class IconSurfaceView extends SurfaceView {
         paintText.setAntiAlias(true);
         paintText.setTextSize(50);
         paintText.setStrokeWidth(5);
+
+        paintPath.setColor(Color.RED);
+        paintPath.setAntiAlias(true);
+        paintPath.setStrokeWidth(2);
+        paintPath.setStyle(Paint.Style.STROKE);
+
+//        path.moveTo(300, 300);
+//        path.lineTo(300, 800);
+//        path.lineTo(1600, 800);
+//        path.lineTo(1600, 300);
+//        path.close();
+        //绘制椭圆
+        RectF rectF = new RectF(200, 200, 1700, 900);
+        //第一种方法绘制椭圆
+        path.addOval(rectF, Path.Direction.CW);
+        float length = pathMeasure.getLength();
+        pathMeasure.getPosTan(length / 2.0f, pos, tan);
+        Log.i(TAG, "init: ");
+        pathMeasure.setPath(path, false);
     }
 
+    Path path = new Path();
+    PathMeasure pathMeasure = new PathMeasure(path, false);
+
+    private float[] pos = new float[2];
+    private float[] tan = new float[2];
 
 
     private SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
@@ -121,6 +150,7 @@ public class IconSurfaceView extends SurfaceView {
 
     //用于清除的画笔
     Paint paintClean = new Paint();
+    long time1 = System.currentTimeMillis();
 
     private void draw() {
         Canvas mCanvas;
@@ -131,7 +161,21 @@ public class IconSurfaceView extends SurfaceView {
             mCanvas.drawPaint(paintClean);
             paintClean.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
 
+            //绘制运动小球
+            mCanvas.drawPath(path, paintPath);
+//            long dis = System.currentTimeMillis() - time1;
+//            final long time = 6000;
+//            long l = dis % time;
+//            float v = 1 - l / (float) time;
+//            float length = pathMeasure.getLength();
+//            Log.i(TAG, "draw: " + l + "   " + v + "  " + length);
+//            pathMeasure.getPosTan(length * v, pos, tan);
+//            mCanvas.drawCircle(pos[0], pos[1], 50, paint);
+
+
             //初始化画布并在画布上画一些东西
+            // TODO: 2018/11/27 暂时不绘制此圆
+//            iconEntitySet.clear();
             for (IconEntity entity : iconEntitySet) {
                 Set<AttachInitiator> linkEntity = entity.getAttachEntity();
                 //todo 划线的地方可优化,就是每个点之间只画一条线就够了,现在的这种实现是互相划一条线,也就是每个相连点话两条重合的线
@@ -145,6 +189,8 @@ public class IconSurfaceView extends SurfaceView {
                 //绘制文本
                 mCanvas.drawText(String.valueOf(entity.number), entity.getX(), entity.getY(), paintText);
             }
+
+
         } catch (Exception e) {
 
         } finally {
