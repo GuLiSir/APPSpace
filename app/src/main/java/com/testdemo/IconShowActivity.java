@@ -135,6 +135,7 @@ public class IconShowActivity extends Activity {
         if (b) {
             initPoint(entity);
         }
+//        
     }
 
     /**
