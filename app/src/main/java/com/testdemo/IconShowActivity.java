@@ -1,23 +1,47 @@
 package com.testdemo;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
+import android.graphics.drawable.VectorDrawable;
 import android.os.Bundle;
+import android.support.v4.graphics.PathParser;
 import android.util.Log;
 import android.view.Display;
 import android.view.Window;
 import android.view.WindowManager;
 
-import com.testdemo.entity.CircleBetweenCircleAccelerator;
 import com.testdemo.entity.IconEntity;
+import com.testdemo.utils.CircleUtils;
 import com.testdemo.widget.IconSurfaceView;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.util.Vector;
 import java.util.concurrent.TimeUnit;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 public class IconShowActivity extends Activity {
 
@@ -90,16 +114,6 @@ public class IconShowActivity extends Activity {
         defaultDisplay.getSize(point);
         int x = point.x;
         int y = point.y;
-//        long l1 = System.nanoTime();
-//        try {
-//            Thread.sleep(1);
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-//        l1  = System.nanoTime()-l1 ;
-//
-//        long l = TimeUnit.NANOSECONDS.toMillis(50000000);
-//        long l2 = TimeUnit.MILLISECONDS.toNanos(5);
         rectParent.right = x;
         rectParent.bottom = y;
 //        rectParent
@@ -107,12 +121,19 @@ public class IconShowActivity extends Activity {
         for (IconEntity entity : iconEntitySet) {
             initPoint(entity);
             entity.setAllEntitySet(iconEntitySet);
-            CircleBetweenCircleAccelerator circleAccelerator = new CircleBetweenCircleAccelerator(entity, iconEntitySet);
-            entity.acceleratorList.add(circleAccelerator);
+//            CircleBetweenCircleAccelerator circleAccelerator = new CircleBetweenCircleAccelerator(entity, iconEntitySet);
+//            CenterAccelerator centerAccelerator = new CenterAccelerator(0,0);
+//            FrameAccelerator frameAccelerator = new FrameAccelerator(rectParent);
+//            entity.addAccelerator(frameAccelerator);
+//            entity.addAccelerator(circleAccelerator);
+//            entity.addAccelerator(centerAccelerator);
         }
 
         iconSurfaceView.DumpItem(iconEntitySet);
 
+
+//            PathParser pathParser =   PathParser.createPathFromPathData( "M17,19.9l1.7,1.1c-4,5.8-12.1,7.8-12.4,7.9L5.8,27C5.9,27,13.5,25.1,17,19.9z" );
+//
     }
 
     private static final String TAG = "IconShowActivity";
@@ -131,36 +152,13 @@ public class IconShowActivity extends Activity {
         entity.setX(randomX);
         entity.setY(randomY);
 
-        boolean b = collisionDetection(entity, iconEntitySet);
-        if (b) {
-            initPoint(entity);
-        }
-//        
-    }
 
-    /**
-     * 碰撞检测的方法,输入一个item,检查是否与其他item有重叠部分
-     */
-    public static boolean collisionDetection(IconEntity entity, Set<IconEntity> iconEntitySet) {
-        //和每一个item进行碰撞检测,不能重叠在一起
         for (IconEntity iconEntity : iconEntitySet) {
-            //过滤掉自己,自己和自己不能进行碰撞检测
-            if (iconEntity != entity) {
-                // TODO: 2018/11/23 需要对精度进行修改
-                int x1 = (int) iconEntity.getX();
-                int y1 = (int) iconEntity.getY();
-                int x2 = (int) entity.getX();
-                int y2 = (int) entity.getY();
-                //勾股定理求圆心距离
-                double sqrt = Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
-                if (sqrt <= (iconEntity.radius + iconEntity.radius)) {
-                    //圆心距离小于半径之和则碰撞
-                    return true;
-                }
+            boolean b = CircleUtils.CircleInCircle(entity, iconEntity);
+            if (b) {
+//                initPoint(entity);
             }
         }
-        return false;
     }
-
 
 }
