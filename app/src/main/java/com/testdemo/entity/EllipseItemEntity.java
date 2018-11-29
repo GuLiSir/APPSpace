@@ -5,7 +5,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -20,12 +19,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.Spliterator;
-import java.util.function.Consumer;
 
 public class EllipseItemEntity implements ItemEntity, AttachInitiator {
     /**
@@ -45,6 +41,7 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
     //目标百分比
     private float tagPercent;
     private float currentPercent;
+    //该值仅用于调试使用
     private int currentPercentIndex;
 
     private float radius = 80;
@@ -56,7 +53,6 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
      * 允许该物体活动的范围
      */
     private final Rect rectParent;
-    private Set<EllipseItemEntity> itemEntitySet;
 
 
     public EllipseItemEntity(int number, Rect rectParent) {
@@ -136,15 +132,31 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
 
     }
 
+    /**
+     * 取得真实的百分比,某些情况,百分比为120%,实际上就是20%,或者-20%,实际上就是80%;此方法就是完成换算,得到真实的百分比
+     *
+     * @return 0.0f-1.0f
+     */
+    private float realPercent(float percent) {
+        if (percent >= 0) {
+            return percent % 1;
+        } else {
+            return 1f - Math.abs(percent % 1);
+        }
+    }
 
     @Override
     public void refreshParam(long lastDuration) {
         float v = lastDuration / (100 * 1000f);
+        float tagPercent1 = tagPercent + -v + moveOffsetPercent;
+        float newPercent = realPercent(tagPercent1);
+        if (tagPercent1 <= 0) {
+            Log.i(TAG, "refreshParam: tagPercent1:" + tagPercent1 + "   realPercent:" + newPercent);
+        }
 
-
-        tagPercent += v;
+        moveOffsetPercent = 0;
 //        逆时针移动
-        tagPercent = (tagPercent % 1);
+        tagPercent = newPercent;
 
 
         //-------------百分比移动的速率矫正,------
@@ -171,7 +183,7 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
 
 
         Log.i(TAG, "refreshParam: 距离,next:" + (NextPercentDistant - 1 / 7f) + "  last:" + lastPercentDistant);
-        tagPercent = tagPercent + (NextPercentDistant - 1 / 7f) * 0.015f - (lastPercentDistant - 1 / 7f) * 0.015f;
+        tagPercent = tagPercent + (NextPercentDistant - 1 / 7f) * 0.005f - (lastPercentDistant - 1 / 7f) * 0.005f;
         //-------------百分比移动的速率矫正,结束------
 
 
@@ -190,14 +202,12 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
         } else {
             float speedX = 0;
             float speedY = 0;
-            //下面数字常亮代表向目标移动的速度
+            //下面数字常量代表向目标移动的速度
             speedX = (this.tagX - this.x) * 0.0055f;
             speedY = (this.tagY - this.y) * 0.0055f;
 
-//            this.x = this.x + speedX * lastDuration;
-//            this.y = this.y + speedY * lastDuration;
-            setY( this.y + speedY * lastDuration );
-            setX( this.x + speedX * lastDuration );
+            setY(this.y + speedY * lastDuration);
+            setX(this.x + speedX * lastDuration);
         }
 
 
@@ -284,14 +294,51 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
         this.touchIng = touch;
     }
 
+    float moveOffsetPercent = 0.0f;
+
     @Override
     public void touchOffset(float offsetX, float offsetY) {
         if (touchIng) {
-            setX(this.x + offsetX);
-            setY(this.y + offsetY);
+            //移动位置前的百分比
+            float currentPercent = this.currentPercent;
+            //移动位置前的位置
+            boolean setX = setX(this.x + offsetX);
+            boolean setY = setY(this.y + offsetY);
+            //移动位置后的百分比
+            int nearestPercent = findNearestPercent();
+            //手指移动的百分比
+            float moveOffsetPercent = nearestPercent / (float) accuracy - currentPercent;
+            if (moveOffsetPercent != 0 && validMovePercent(moveOffsetPercent)) {
+                //手指有百分比的移动,也就是有滑动控件,通知其他圆做相同的运动,也就是全部跟着滑动的效果
+                for (EllipseItemEntity itemEntity : itemEntities) {
+//                    itemEntity.moveOffsetPercent = moveOffsetPercent;
+                    notifyOtherMove(moveOffsetPercent, itemEntity);
+                }
+
+            }
         } else {
             throw new IllegalStateException();
         }
+    }
+
+    private void notifyOtherMove(float percent, EllipseItemEntity... itemEntitySet) {
+        for (EllipseItemEntity itemEntity : itemEntitySet) {
+            if (itemEntity != this) {
+                itemEntity.moveOffsetPercent = percent;
+            }
+        }
+    }
+
+    /**
+     * 检查手指移动的百分比是否有效,需要用此方法进行判断的原因解释:
+     * 当移动圆的时候,可能会出现移动后跨结点的情况,例如顺序的number是123456,组成一个环状,
+     * 现在手指移动2,检查移动的百分比数值,是否大于平均数值,如果大于,则判定为跨过了结点,该次移动的百分比数值无效
+     *
+     * @param moveOffsetPercent
+     * @return
+     */
+    private boolean validMovePercent(float moveOffsetPercent) {
+        return moveOffsetPercent < 1f / itemEntities.size() && moveOffsetPercent > -1f / itemEntities.size();
     }
 
     @Override
@@ -303,46 +350,57 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
     }
 
     /**
-     * 设置下一次的x位置,注:调用此方法不一定能成功.
+     * 设置下一次的x位置,注:调用此方法不一定能成功,取决于检测规则是否通过
      * 所有对x赋值的操作都应该调用此方法,不能直接进行赋值,此方法中做了屏幕边界检测和碰撞检测
      */
     @Override
-    public void setX(float x) {
+    public boolean setX(float x) {
         //左右屏幕越界判断
         if (rectParent.left + radius <= x && x <= rectParent.right - radius) {
-            //对该界面上的其他物体进行碰撞检测,如果碰撞了,则不进行设置新的位置
+            //与该界面上的其他物体进行碰撞检测,如果碰撞了,则不进行设置新的位置
             for (EllipseItemEntity itemEntity : itemEntities) {
                 if (itemEntity != this) {
                     double v = CircleUtils.pointDistance(x, this.y, itemEntity.x, itemEntity.y);
-                    if (v<=(this.radius+itemEntity.radius)) {
-
-                        return;
+                    if (v <= (this.radius + itemEntity.radius)) {
+                        return false;
                     }
                 }
             }
             this.x = x;
+            return true;
         }
+        return false;
     }
 
     /**
-     * 设置下一次的y位置,注:调用此方法不一定能成功.
+     * 设置下一次的y位置,注:调用此方法不一定能设置成功,取决于检测规则是否通过
      * 所有对y赋值的操作都应该调用此方法,不能直接进行赋值,此方法中做了屏幕边界检测和碰撞检测
      */
     @Override
-    public void setY(float y) {
+    public boolean setY(float y) {
         //上下屏幕越界判断
         if (rectParent.top + radius <= y && y <= rectParent.bottom - radius) {
-            //对该界面上的其他物体进行碰撞检测,如果碰撞了,则不进行设置新的位置
+            //与该界面上的其他物体进行碰撞检测,如果碰撞了,则不进行设置新的位置
             for (EllipseItemEntity itemEntity : itemEntities) {
                 if (itemEntity != this) {
+                    //请求设置新的位置之后,两圆心之间的距离,注意下面的参数y用的是形参
                     double v = CircleUtils.pointDistance(this.x, y, itemEntity.x, itemEntity.y);
-                    if (v<=(this.radius+itemEntity.radius)) {
-                        return;
+                    if (isCollision(itemEntity)) {
+                        //如果当前与某一圆体重叠了,则检测新的位置两圆心之间距离是否更大了,如果更大则允许设置新的位置,这样能使重叠面积变小
+                        double currentDistance = CircleUtils.pointDistance(this.x, this.y, itemEntity.x, itemEntity.y);
+                        if (v > currentDistance) {
+                            break;
+                        }
+                    }
+                    if (v <= (this.radius + itemEntity.radius)) {
+                        return false;
                     }
                 }
             }
             this.y = y;
+            return true;
         }
+        return false;
     }
 
     @Override
@@ -451,52 +509,22 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
         this.nextNode = null;
     }
 
+    @Deprecated
     public void refresh2() {
-        float nextPercent = nextNode.currentPercent;
-        float lastPercent = lastNode.currentPercent;
-        if (lastPercent <= currentPercent && currentPercent <= nextPercent) {
-//            tagPercent =tagPercent +  ;
-        } else {
-//            tagPercent = ((nextPercent + lastPercent) % 1) / 2f;
-        }
+//        float nextPercent = nextNode.currentPercent;
+//        float lastPercent = lastNode.currentPercent;
+//        if (lastPercent <= currentPercent && currentPercent <= nextPercent) {
+////            tagPercent =tagPercent +  ;
+//        } else {
+////            tagPercent = ((nextPercent + lastPercent) % 1) / 2f;
+//        }
 //        Log.i(TAG, String.format("refresh2: 左:%.2f,中:%.2f,右:%.2f", lastPercent,tagPercent,nextPercent));
 
     }
 
     public void setAllEntitySet(Set<EllipseItemEntity> itemEntitySet) {
-        this.itemEntitySet = itemEntitySet;
         itemEntities.addAll(itemEntitySet);
     }
 
-    private float NextPercentDistant = 0.0f;
-    private float lastPercentDistant = 0.0f;
-
-    public void refreshPercentDistance() {
-        if (nextNode.currentPercent > currentPercent) {
-            NextPercentDistant = nextNode.currentPercent - currentPercent;
-        } else if (nextNode.currentPercent < currentPercent) {
-            NextPercentDistant = nextNode.currentPercent + 1 - currentPercent;
-        } else {
-            NextPercentDistant = 0;
-        }
-    }
-
-//    private Iterator<EllipseItemEntity> get() {
-//        return new Iterator<EllipseItemEntity>() {
-//
-//            private EllipseItemEntity currentIndex = nextNode;
-//
-//            @Override
-//            public boolean hasNext() {
-//                return currentIndex != null && currentIndex != EllipseItemEntity.this;
-//            }
-//
-//            @Override
-//            public EllipseItemEntity next() {
-//                currentIndex = currentIndex.nextNode;
-//                return currentIndex;
-//            }
-//        };
-//    }
 
 }

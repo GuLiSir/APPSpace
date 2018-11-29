@@ -1,7 +1,6 @@
 package com.testdemo.absPkg;
 
 import android.graphics.Canvas;
-import android.graphics.Point;
 import android.graphics.PointF;
 
 /**
@@ -35,14 +34,14 @@ public interface ItemEntity {
     void touchOffset(float offsetX, float offsetY);
 
     /**
-     * 是否与该物体碰撞了,这里的碰撞检测,是有可能出现重合的情况,不一定是刚刚好碰撞,所以可以将重合视为碰撞
+     * 是否与该物体碰撞(重叠,有交点)了
      *
-     * @return true碰撞了, false没有碰撞
+     * @return true碰撞了(有交点), false没有碰撞(无交点)
      */
     boolean isCollision(ItemEntity body);
 
-    void setX(float x);
-    void setY(float y);
+    boolean setX(float x);
+    boolean setY(float y);
 
     float getX();
     float getY();
