@@ -1,6 +1,7 @@
 package com.testdemo.utils;
 
 import android.graphics.Point;
+import android.util.Log;
 
 import com.testdemo.absPkg.Circle;
 import com.testdemo.entity.EllipseItemEntity;
@@ -75,5 +76,7 @@ public class CircleUtils {
         //圆心距离小于总半径之和则碰撞
         return v <= (circle1.getRadius() + circle2.getRadius());
     }
+
+
 
 }

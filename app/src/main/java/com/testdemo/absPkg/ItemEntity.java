@@ -2,6 +2,7 @@ package com.testdemo.absPkg;
 
 import android.graphics.Canvas;
 import android.graphics.Point;
+import android.graphics.PointF;
 
 /**
  * 每一项
@@ -27,7 +28,7 @@ public interface ItemEntity {
      * @param point
      * @return
      */
-    boolean touchIn(Point point);
+    boolean touchIn(PointF point);
 
     void onTouch(boolean touch);
 

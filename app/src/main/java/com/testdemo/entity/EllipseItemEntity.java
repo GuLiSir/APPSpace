@@ -72,10 +72,10 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
 
     private static Path path = new Path();
     //预先分割的粒度
-    private static final int accuracy = 100;
+    public static final int accuracy = 100;
     private static PathMeasure pathMeasure = new PathMeasure(path, false);
     //    private static float[][] percentAll = new float[accuracy][2];
-    private static final SparseArray<PointF> pointFSparseArray = new SparseArray<>();
+    public static final SparseArray<PointF> pointFSparseArray = new SparseArray<>();
 
     static {
 
@@ -117,7 +117,7 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
     public void onDraw(Canvas canvas) {
         //绘制连接线
         for (AttachInitiator attachInitiator : attachEntity) {
-            // TODO: 2018/11/28 强转可优化
+            // TODO: 2018/11/28 强转类型可优化
             EllipseItemEntity ellipseItemEntity = (EllipseItemEntity) attachInitiator;
             canvas.drawLine(this.x, this.y, ellipseItemEntity.getX(), ellipseItemEntity.getY(), paint2);
         }
@@ -171,7 +171,7 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
 
 
         Log.i(TAG, "refreshParam: 距离,next:" + (NextPercentDistant - 1 / 7f) + "  last:" + lastPercentDistant);
-        tagPercent = tagPercent + (NextPercentDistant - 1 / 7f) * 0.005f - (lastPercentDistant - 1 / 7f) * 0.005f;
+        tagPercent = tagPercent + (NextPercentDistant - 1 / 7f) * 0.015f - (lastPercentDistant - 1 / 7f) * 0.015f;
         //-------------百分比移动的速率矫正,结束------
 
 
@@ -194,8 +194,10 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
             speedX = (this.tagX - this.x) * 0.0055f;
             speedY = (this.tagY - this.y) * 0.0055f;
 
-            this.x = this.x + speedX * lastDuration;
-            this.y = this.y + speedY * lastDuration;
+//            this.x = this.x + speedX * lastDuration;
+//            this.y = this.y + speedY * lastDuration;
+            setY( this.y + speedY * lastDuration );
+            setX( this.x + speedX * lastDuration );
         }
 
 
@@ -224,8 +226,8 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
 
     }
 
-    //根据百分比排序
-    private final Comparator comparator = new Comparator<EllipseItemEntity>() {
+    //根据当前所在的百分比排序
+    private final Comparator<EllipseItemEntity> comparator = new Comparator<EllipseItemEntity>() {
         @Override
         public int compare(EllipseItemEntity o1, EllipseItemEntity o2) {
             if (o1.currentPercent == o2.currentPercent) {
@@ -241,7 +243,7 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
     /**
      * 查找距离本圆体最近的百分比
      * <p>
-     * //todo 可优化的点:根据距离增减的斜率,来优化查找,省略后面的计算
+     * //todo 可优化的点:根据距离增减的变化率,来优化查找,省略后面的计算
      */
     private int findNearestPercent() {
         if (pointFSparseArray.size() == 0) {
@@ -268,7 +270,7 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
     private static final String TAG = "EllipseItemEntity";
 
     @Override
-    public boolean touchIn(Point point) {
+    public boolean touchIn(PointF point) {
         double v = CircleUtils.pointDistance(x, y, point.x, point.y);
         return v <= radius;
     }
@@ -285,8 +287,8 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
     @Override
     public void touchOffset(float offsetX, float offsetY) {
         if (touchIng) {
-            this.x += offsetX;
-            this.y += offsetY;
+            setX(this.x + offsetX);
+            setY(this.y + offsetY);
         } else {
             throw new IllegalStateException();
         }
@@ -300,16 +302,45 @@ public class EllipseItemEntity implements ItemEntity, AttachInitiator {
         return false;
     }
 
+    /**
+     * 设置下一次的x位置,注:调用此方法不一定能成功.
+     * 所有对x赋值的操作都应该调用此方法,不能直接进行赋值,此方法中做了屏幕边界检测和碰撞检测
+     */
     @Override
     public void setX(float x) {
-        if (rectParent.left + radius >= x && rectParent.right - radius <= x) {
+        //左右屏幕越界判断
+        if (rectParent.left + radius <= x && x <= rectParent.right - radius) {
+            //对该界面上的其他物体进行碰撞检测,如果碰撞了,则不进行设置新的位置
+            for (EllipseItemEntity itemEntity : itemEntities) {
+                if (itemEntity != this) {
+                    double v = CircleUtils.pointDistance(x, this.y, itemEntity.x, itemEntity.y);
+                    if (v<=(this.radius+itemEntity.radius)) {
+
+                        return;
+                    }
+                }
+            }
             this.x = x;
         }
     }
 
+    /**
+     * 设置下一次的y位置,注:调用此方法不一定能成功.
+     * 所有对y赋值的操作都应该调用此方法,不能直接进行赋值,此方法中做了屏幕边界检测和碰撞检测
+     */
     @Override
     public void setY(float y) {
-        if (rectParent.top + radius >= x && rectParent.bottom - radius <= x) {
+        //上下屏幕越界判断
+        if (rectParent.top + radius <= y && y <= rectParent.bottom - radius) {
+            //对该界面上的其他物体进行碰撞检测,如果碰撞了,则不进行设置新的位置
+            for (EllipseItemEntity itemEntity : itemEntities) {
+                if (itemEntity != this) {
+                    double v = CircleUtils.pointDistance(this.x, y, itemEntity.x, itemEntity.y);
+                    if (v<=(this.radius+itemEntity.radius)) {
+                        return;
+                    }
+                }
+            }
             this.y = y;
         }
     }

@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
@@ -21,7 +22,9 @@ import android.view.VelocityTracker;
 
 import com.testdemo.absPkg.ItemEntity;
 import com.testdemo.entity.EllipseItemEntity;
+import com.testdemo.utils.PointToLineDis;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -142,12 +145,16 @@ public class IconSurfaceView2 extends SurfaceView {
             mCanvas.drawPaint(paintClean);
             paintClean.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC));
             //绘制运动的轨迹线
-//            mCanvas.drawPath(path, paintPath);
+            mCanvas.drawPath(path, paintPath);
             //初始化画布并在画布上画一些东西
             for (ItemEntity itemEntity : iconEntitySet) {
                 itemEntity.onDraw(mCanvas);
             }
 
+            //绘制交点
+//            if (testJiaoDian != null) {
+//                mCanvas.drawCircle(testJiaoDian.x, testJiaoDian.y, 20, paintPath);
+//            }
         } catch (Exception e) {
 
         } finally {
@@ -198,9 +205,11 @@ public class IconSurfaceView2 extends SurfaceView {
     //移动速度测量
     private VelocityTracker mVelocityTracker = null;
     //按下屏幕的位置
-    private final Point touchDownPoint = new Point();
+    private final PointF touchDownPoint = new PointF();
     //最后一次触摸的位置,包含按下和移动
-    private final Point lastTouchPoint = new Point();
+    private final PointF lastTouchPoint = new PointF();
+
+//    private PointF testJiaoDian;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -218,10 +227,10 @@ public class IconSurfaceView2 extends SurfaceView {
                     mVelocityTracker.clear();
                 }
                 mVelocityTracker.addMovement(event);
-                touchDownPoint.x = (int) x;
-                touchDownPoint.y = (int) y;
-                lastTouchPoint.x = (int) x;
-                lastTouchPoint.y = (int) y;
+                touchDownPoint.x = x;
+                touchDownPoint.y = y;
+                lastTouchPoint.x = x;
+                lastTouchPoint.y = y;
                 //检查是否按在了指定的圆点
                 for (ItemEntity entity : iconEntitySet) {
 //                    Log.i(TAG, String.format("onTouchEvent: down:%s %.2f, radius:%d", entity.toString(), v, entity.radius));
@@ -245,8 +254,27 @@ public class IconSurfaceView2 extends SurfaceView {
                 }
                 Log.i(TAG, String.format("onTouchEvent: speed:x %.2f,y %.2f offSetX:%.2f,offSetY:%.2f",
                         mVelocityTracker.getXVelocity(), mVelocityTracker.getYVelocity(), offsetX, offsetY));
-                lastTouchPoint.x = (int) x;
-                lastTouchPoint.y = (int) y;
+//                testJiaoDian = null;
+//                if (offsetX != 0 && offsetY != 0
+//                        && lastTouchPoint.x != x
+//                        && lastTouchPoint.y != y) {
+//                    //找出与椭圆的交点
+//                    double[] doubles = PointToLineDis.lineExp(lastTouchPoint.x, lastTouchPoint.y, x, y);
+//                    Log.i(TAG, "onTouchEvent: 斜率:"+( - doubles[0]/doubles[1]));
+//                    double minDis = 100000;
+//                    for (int i = 0; i < EllipseItemEntity.accuracy; i++) {
+//                        PointF pointF = EllipseItemEntity.pointFSparseArray.get(i);
+//                        double v = PointToLineDis.alLine(pointF.x, pointF.y, doubles[0], doubles[1], doubles[2]);
+//                        Log.i(TAG, "onTouchEvent: 小一号:" + i + "   点到直线的距离:" + v+"  公式:"+ Arrays.toString(doubles)+"   单点:"+pointF);
+//                        if (v <= minDis) {
+//                            testJiaoDian = pointF;
+//                            minDis = v;
+//                        }
+//                    }
+//                }
+
+                lastTouchPoint.x = x;
+                lastTouchPoint.y = y;
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_OUTSIDE:
